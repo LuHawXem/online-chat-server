@@ -1,0 +1,18 @@
+db:
+  enginename: ""
+  username: ""
+  password: ""
+  host: ""
+  port: ""
+  dbname: ""
+  charset: ""
+
+redis:
+  password: ""
+  host: ""
+  port: ""
+
+secret:
+  privatekey: ""
+  publickey: ""
+  tokenKey: ""
