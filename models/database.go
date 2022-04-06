@@ -32,7 +32,7 @@ func init()  {
 	db.DB().SetConnMaxLifetime(1 * time.Hour)
 	db.SingularTable(true)
 
-	err = db.AutoMigrate(&TUser{}).Error
+	err = db.AutoMigrate(&TUser{},&TRelation{},&TMessage{}).Error
 	if err != nil {
 		log.Printf("auto migrate failed: %v \n", err)
 		return

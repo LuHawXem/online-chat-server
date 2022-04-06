@@ -43,6 +43,7 @@ func Register(c *gin.Context)  {
 func Login(c *gin.Context) {
 	id, _ := c.Get("id")
 	var user models.User
+	/* smart select is a gorm v2 feature, it doesn't work here */
 	err := models.GetDB().Table("t_user").Where("id = ?", id.(uint32)).First(&user).Error
 	if err != nil {
 		log.Println(err)
@@ -70,4 +71,3 @@ func Logout(c *gin.Context)  {
 
 	c.JSON(http.StatusOK, gin.H{})
 }
-

@@ -6,7 +6,7 @@ import (
 	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
-	"time"
+	"online-chat-server/models"
 )
 
 var conn = make(map[string]*websocket.Conn)
@@ -19,8 +19,8 @@ var up = websocket.Upgrader{
 }
 
 func Websocket(c *gin.Context) {
-	log.Printf("request websocket with method:%s", c.Request.Method)
 	id, _ := c.Get("id")
+	log.Printf("user: %d connect\n", id.(uint32))
 	token := c.GetHeader("token")
 	if c.Request.Method == "GET" && token == "" {
 		token = c.Query("token")
@@ -35,31 +35,57 @@ func Websocket(c *gin.Context) {
 	key := fmt.Sprintf("chat_user:%v:%s", id, token)
 	conn[key] = ws
 
-	go func() {
-		defer func() {
+	go WriteMessage(ws, id.(uint32), key)
+	go ReadMessage(ws, id.(uint32), key)
+}
+
+func ReadMessage(ws *websocket.Conn, id uint32, key string) {
+	for {
+		var m models.Message
+		err := ws.ReadJSON(&m)
+		if err != nil {
+			log.Printf("chain %s ReadJSON error: %v\n", key, err)
 			ws.Close()
-			log.Printf("chaining:%s disconnect\n", key)
 			delete(conn, key)
-		}()
-
-		for {
-			log.Println("websocket online")
-			type js struct {
-				Message string
-				Code int
-			}
-
-			ms := &js{
-				Message: "hello chat",
-				Code: http.StatusOK,
-			}
-			err = ws.WriteJSON(ms)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-
-			time.Sleep(5 * time.Second)
+			break
 		}
-	}()
+
+		switch m.Type {
+		case 0:
+			break
+		case 1:
+			message := models.TMessage{
+				Receiver:  m.Receiver,
+				Content:   m.Content,
+				Type:      m.Type,
+				CreatedBy: id,
+			}
+			models.GetDB().Create(&message)
+			break
+		case 2:
+			break
+		case 3:
+			break
+		}
+	}
+}
+
+func WriteMessage(ws *websocket.Conn, id uint32, key string) {
+	for {
+		var messages []models.TMessage
+		models.GetDB().Where("receiver = ? AND state = 0", id).Find(&messages)
+		if len(messages) != 0 {
+			for _, message := range messages {
+				err := ws.WriteJSON(message)
+				if err != nil {
+					log.Printf("chain %s ReadJSON error: %v\n", key, err)
+					ws.Close()
+					delete(conn, key)
+					goto exit
+				}
+				models.GetDB().Model(&message).Update("state", "1")
+			}
+		}
+	}
+	exit:
 }

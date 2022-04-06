@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"online-chat-server/models"
 	"online-chat-server/utils"
+	"strconv"
 	"time"
 )
 
@@ -101,7 +102,8 @@ func AuthToken() gin.HandlerFunc {
 			return
 		}
 		log.Printf("user:%s request:%s \n", data.Val(), c.FullPath())
-		c.Set("id", data.Val())
+		id, _ := strconv.Atoi(data.Val())
+		c.Set("id", uint32(id))
 
 		ttl := models.GetRedis().TTL(token)
 		if c.FullPath() != "/logout" && ttl.Val() <= 30 * time.Minute {
