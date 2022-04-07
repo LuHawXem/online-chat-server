@@ -7,6 +7,7 @@ import (
 
 func init()  {
 	r := gin.Default()
+	r.Use(service.Collect())
 	r.Use(service.Cors())
 	r.POST("/register", service.BeforeRegister(), service.Register)
 	r.POST("/login", service.BeforeLogin(), service.Login)

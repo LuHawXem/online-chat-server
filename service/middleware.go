@@ -10,6 +10,14 @@ import (
 	"time"
 )
 
+func Collect() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ip, _ := c.RemoteIP()
+		log.Printf("request %s from %s\n", c.FullPath(), ip)
+		c.Next()
+	}
+}
+
 func Cors() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")

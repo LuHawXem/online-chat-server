@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"online-chat-server/models"
+	"strconv"
 )
 
 var conn = make(map[string]*websocket.Conn)
@@ -47,7 +48,7 @@ func ReadMessage(ws *websocket.Conn, id uint32, key string) {
 			log.Printf("chain %s ReadJSON error: %v\n", key, err)
 			ws.Close()
 			delete(conn, key)
-			break
+			goto exit
 		}
 
 		switch m.Type {
@@ -56,6 +57,8 @@ func ReadMessage(ws *websocket.Conn, id uint32, key string) {
 		case 1:
 			message := models.TMessage{
 				Receiver:  m.Receiver,
+				ReplyID:   m.ReplyID,
+				Operate:   m.Operate,
 				Content:   m.Content,
 				Type:      m.Type,
 				CreatedBy: id,
@@ -66,8 +69,23 @@ func ReadMessage(ws *websocket.Conn, id uint32, key string) {
 			break
 		case 3:
 			break
+		case 4:
+			var user models.User
+			num, _ := strconv.Atoi(m.Content.String)
+			models.GetDB().Table("t_user").Where("account like ?", uint64(num)).First(&user)
+			if user.ID != 0 {
+				err = ws.WriteJSON(user)
+				if err != nil {
+					log.Printf("chain %s WriteJSON error: %v\n", key, err)
+					ws.Close()
+					delete(conn, key)
+					goto exit
+				}
+			}
+			break
 		}
 	}
+	exit:
 }
 
 func WriteMessage(ws *websocket.Conn, id uint32, key string) {
@@ -83,7 +101,7 @@ func WriteMessage(ws *websocket.Conn, id uint32, key string) {
 					delete(conn, key)
 					goto exit
 				}
-				models.GetDB().Model(&message).Update("state", "1")
+				models.GetDB().Model(&message).Update("state", 1) // 值类型要对上,Update("state", "1")不会生效
 			}
 		}
 	}
